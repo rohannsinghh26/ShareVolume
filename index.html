@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ShareVolume - Charles River Laboratories</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .box { padding: 15px; border: 1px solid #ccc; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<h1 id="share-entity-name">Loading...</h1>
+
+<div class="box">
+    <p><strong>Maximum Shares:</strong> <span id="share-max-value"></span></p>
+    <p><strong>Max Financial Year:</strong> <span id="share-max-fy"></span></p>
+    <p><strong>Minimum Shares:</strong> <span id="share-min-value"></span></p>
+    <p><strong>Min Financial Year:</strong> <span id="share-min-fy"></span></p>
+</div>
+
+<script>
+async function loadData(cik) {
+    const url = `https://data.sec.gov/api/xbrl/companyconcept/CIK${cik}/dei/EntityCommonStockSharesOutstanding.json`;
+
+    // IMPORTANT: Add real User-Agent for SEC
+    const proxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+
+    const res = await fetch(proxy);
+    const dataWrapper = await res.json();
+    const data = JSON.parse(dataWrapper.contents);
+
+    const name = data.entityName;
+
+    const filtered = data.units.shares.filter(
+        x => x.fy > "2020" && typeof x.val === "number"
+    );
+
+    let max = filtered[0];
+    let min = filtered[0];
+
+    filtered.forEach(x => {
+        if (x.val > max.val) max = x;
+        if (x.val < min.val) min = x;
+    });
+
+    document.getElementById("share-entity-name").textContent = name;
+    document.getElementById("share-max-value").textContent = max.val;
+    document.getElementById("share-max-fy").textContent = max.fy;
+    document.getElementById("share-min-value").textContent = min.val;
+    document.getElementById("share-min-fy").textContent = min.fy;
+
+    document.title = `ShareVolume - ${name}`;
+}
+
+// Check for ?CIK param
+const params = new URLSearchParams(window.location.search);
+let cik = params.get("CIK");
+
+// Default CIK
+if (!cik) cik = "0001100682";
+
+loadData(cik);
+</script>
+
+</body>
+</html>
